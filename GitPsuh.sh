@@ -1,5 +1,5 @@
 #!/bin/bash
-LocalRepositories="/d/CCPD-G8.6/Panda"
+LocalRepositories="/d/CCPD-G8.6/Python3-WebApp"
 cd $LocalRepositories
 
 git status -s

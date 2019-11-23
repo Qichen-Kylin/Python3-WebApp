@@ -155,3 +155,14 @@ loop.run_forever()
 - 基类`Model`负责执行操作，比如数据库的存储、读取，查找等操作等。
 - 基类中方法都基于`asyncio`的装饰，所以方法都是协程。
 - 任何继承自`Model`的类，会自动通过`ModelMetaclass`扫描映射关系，并存储到自身的类属性中。
+
+# WebApp实战
+## Day-4 编写models
+**有了`ORM`，就可以把`WebApp`需要的表用`Model`表示出来：`models.py`**
+- 在编写`ORM`时，给每个`Field`增加一个`default`参数可以让ORM自己填入缺省值，非常方便。并且缺省值可以作为函数对象传入，在调用`save()`时自动计算。
+- 比如：定义主键`Id`的缺省值是函数`next_id`,创建时间`created_at`的缺省值是函数`time.time`，可以自动设置当前时间。
+- 日期和时间用`float`类型存储在数据库中，而不是`datatime`类型，这么做的好处是不必关心数据库的时区以及时区转换问题，排序非常简便，显示的时候，只需要做一个`float`到`str`的转换。
+
+### 初始化数据库表
+1. 连接数据库初始化：脚本见 [`Schema.sql`]( "Schema.sql");
+2. 用python的mysql-connector初始化：见 [`InitSchema.py`]( "InitSchema.py").
