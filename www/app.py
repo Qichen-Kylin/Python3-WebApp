@@ -18,6 +18,7 @@ from jinja2 import Environment, FileSystemLoader
 import orm
 from coroweb import add_routes, add_static
 
+#初始化jinja2，以便其他函数使用jinja2模板
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
     options = dict(
@@ -39,12 +40,25 @@ def init_jinja2(app, **kw):
             env.filters[name] = f
     app['__templating__'] = env
 
+'''
+middleware:
+
+如何将函数返回值转化为web.response对象呢？这里引入aiohttp框架的web.Application()中的middleware参数。
+middleware是一种拦截器，一个URL在被某个函数处理前，可以经过一系列的middleware的处理。
+一个middleware可以改变URL的输入、输出，甚至可以决定不继续处理而直接返回。middleware的用处就在于把通用的功能从每个URL处理函数中拿出来，集中放到一个地方。
+middleware的感觉有点像装饰器，这与上面编写的RequestHandler有点类似。
+从官方文档可以知道，当创建web.appliction的时候，可以设置middleware参数，而middleware的设置是通过创建一些middleware factory(协程函数)。
+这些middleware factory接受一个app实例，一个handler两个参数，并返回一个新的handler。
+'''
+
+#一个记录URL日志的logger可以作为middle factory
 async def logger_factory(app, handler):
     async def logger(request):
         logging.info('Request: %s %s' % (request.method, request.path))
         # await asyncio.sleep(0.3)
         return (await handler(request))
     return logger
+
 
 async def data_factory(app, handler):
     async def parse_data(request):
@@ -58,6 +72,7 @@ async def data_factory(app, handler):
         return (await handler(request))
     return parse_data
 
+#转化得到response对象的middleware factory
 async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler...')
@@ -96,6 +111,7 @@ async def response_factory(app, handler):
         return resp
     return response
 
+#datetime_filter函数实质是一个拦截器
 def datetime_filter(t):
     delta = int(time.time() - t)
     if delta < 60:
@@ -110,7 +126,7 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='awesome')
+    await orm.create_pool(loop=loop, host='10.80.36.17', port=3306, user='webapp', password='123456', database='webapp')
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
