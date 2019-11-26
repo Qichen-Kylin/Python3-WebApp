@@ -166,3 +166,103 @@ loop.run_forever()
 ### 初始化数据库表
 1. 连接数据库初始化：脚本见 [`Schema.sql`]( "Schema.sql");
 2. 用python的mysql-connector初始化：见 [`InitSchema.py`]( "InitSchema.py").
+
+## Day-5 编写Web框架
+> 因为复杂的Web应用程序，光靠一个WSGI(Web Server Gateway Interface)函数来处理还是太底层了，我们需要在WSGI之上再抽象出Web框架(比如Aiohttp、Django、Flask等)，从而进一步简化Web开发。
+
+在Day-1编写web app骨架因为要实现协程，所以运用的是aiohttpweb框架。那么现在为何又要重新编写一个新的web框架呢，这是因为从使用者的角度来说，aiohttp相对比较底层，想要使用框架时编写更少的代码，就只能在aiohttp框架上封装一个更高级的框架。
+
+> Web框架的设计是完全从使用者出发，目的是让框架使用者编写尽可能少的代码。
+
+因此我们希望框架使用者可以摒弃复杂的步骤，这次新创建的框架想要达到的预期效果是：只需编写函数(不然就要创建async def handle_url_xxx(request): ...这样的一大推东西)，透过新建的Web框架就可以实现相同的效果。同时，这样编写简单的函数而非引入request和web.Response还有一个额外的好处，就是可以单独测试，否则，需要模拟一个request才能测试。
+
+因为是以aiohttp框架为基础，要达到上述预期的效果，也是需要符合aiohttp框架要求，因此就需要考虑如何在request对象中，提取使用者编写的函数中需要用到的参数信息，以及如何将函数的返回值转化web.response对象并返回。
+
+### 1. 编写URL处理函数
+#### 1.1 aiohttp编写URL处理处理函数
+Day-1的URL处理函数比较简单，因为Day-1的的URL处理函数没有真正意义上使用到request参数，但总体上差不多。
+使用aiohttp框架，编写一个URL处理函数大概需要几步：
+第一步，添加协程装饰器
+```
+async def handle_url_xxx(request):
+       ...
+```
+第二步，对request参数进行操作，以获取相应的参数
+```
+url_param = request.match_info['key']
+query_params = parse_qs(request.query_string)
+```
+第三步，就是构造Response对象并返回
+```
+text = render('template', data)
+return web.Response(text.encode('utf-8'))
+```
+而新创建的web框架希望可以封装以上一些步骤，在使用时，更加方便快捷。
+
+#### 1.2 新建web框架编写URL处理函数
+##### 1.2.1 @get 和 @post
+> Http定义了与服务器交互的不同方法，最基本的方法有4种，分别是GET，POST，PUT，DELETE。URL全称是资源描述符，我们可以这样认为：一个URL地址，它用于描述一个网络上的资源，而HTTP中的GET，POST，PUT，DELETE就对应着对这个资源的查，改，增，删4个操作。
+建议：
+> * 1、get方式的安全性较Post方式要差些，包含机密信息的话，建议用Post数据提交方式；
+> * 2、在做数据查询时，建议用Get方式；而在做数据添加、修改或删除时，建议用Post方式；
+
+把一个函数映射为一个URL处理函数，可以先构造一个装饰器，用来存储、附带URL信息
+##### 1.2.2 定义RequestHandler
+> 参考：关于inspect
+
+使用者编写的URL处理函数不一定是一个coroutine，因此用`RequestHandler()`来封装一个**URL**处理函数。
+`RequestHandler`是一个类，创建的时候定义了`__call__()`方法，因此可以将其实例视为函数。
+`RequestHandler`目的就是从URL函数中分析其需要接收的参数，从request中获取必要的参数，调用URL函数。(要完全符合aiohttp框架的要求，就需要把结果转换为web.Response对象)
+##### 1.2.3 封装APIError
+从`RequestHandler`代码可以看出最后调用URL函数时，URL函数可能会返回一个名叫`APIError`的错误，那这个APIError又是什么来的呢，其实它的作用是用来返回诸如账号登录信息的错误。
+
+### 2.编写add_route函数以及add_static函数
+> 参考：
+关于_import_
+关于rfind
+关于add_static
+关于Jinja2
+
+由于新建的web框架时基于aiohttp框架，所以需要再编写一个`add_route()`函数，用来注册一个URL处理函数，主要起验证函数是否有包含URL的响应方法与路径信息，以及将函数变为协程。
+
+通常a`dd_route()`注册会调用很多次，而为了框架使用者更加方便，可以编写了一个可以批量注册的函数`add_routes()`，预期效果是：只需向这个函数提供要批量注册函数的文件路径，新编写的函数就会筛选，注册文件内所有符合注册条件的函数。
+
+`add_static(add):`添加静态文件夹的路径。
+
+`nit_jinja2(app, **kw)`: 添加完静态文件还需要初始化jinja2模板。
+
+### 3. 编写middleware
+> 参考：
+关于middleware
+关于response
+
+如何将函数返回值转化为`web.response`对象呢？
+
+这里引入aiohttp框架的web.Application()中的middleware参数。
+
+middleware是一种拦截器，一个URL在被某个函数处理前，可以经过一系列的middleware的处理。一个middleware可以改变URL的输入、输出，甚至可以决定不继续处理而直接返回。middleware的用处就在于把通用的功能从每个URL处理函数中拿出来，集中放到一个地方。
+
+middleware的感觉有点像装饰器，这与上面编写的RequestHandler有点类似。
+
+从官方文档可以知道，当创建web.appliction的时候，可以设置middleware参数，而middleware的设置是通过创建一些middleware factory(协程函数)。这些middleware factory接受一个app实例，一个handler两个参数，并返回一个新的handler。
+
+- 一个记录URL日志的logger可以作为middle factory；
+- 转化得到response对象的middleware factory等。
+
+参考原文链接：[Day5-编写web框架](https://blog.csdn.net/qq_38801354/article/details/73008111 "Day5-编写web框架")
+
+## Day-6 编写配置文件
+- 通常，一个`Web App`运行的时候都要读取配置文件，比如数据库的名字，口令等，在不同的环境中运行，可以读取不同的配置文件来获得正确的配置。
+- 由于Python本身语法简单，完全可以用源代码来实现配置，而不需要解析一个单独的`.properties` 或者`.yaml`等配置文件。
+- 默认的配置文件应该完全符合本地开发环境，这样，无需任何设置，就可以立刻启动服务器。
+
+### 实现思路
+1. 编写默认配置文件 `config_default.py`；
+
+2. 编写覆盖配置文件 `config_override.py`；
+
+3. Merge配置文件为`config.py`。
+
+把`config_default.py`作为开发环境的标准配置，把`config_override.py`作为生产环境的标准配置；就可以既方便的在本地开发，又可以随时把应用部署到服务器上。
+
+应用程序读取配置文件需要优先从`config_override.py`读取，为了简化读取配置文件，可以把所有配置读取到统一的`config.py`中。
