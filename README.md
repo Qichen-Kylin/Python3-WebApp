@@ -283,3 +283,27 @@ middleware的感觉有点像装饰器，这与上面编写的RequestHandler有�
 把`config_default.py`作为开发环境的标准配置，把`config_override.py`作为生产环境的标准配置；就可以既方便的在本地开发，又可以随时把应用部署到服务器上。
 
 应用程序读取配置文件需要优先从`config_override.py`读取，为了简化读取配置文件，可以把所有配置读取到统一的`config.py`中。
+
+## Day-7 编写MVC
+> `MVC：Model-View-Controller`,中文名“模型-视图-控制器”。
+- 其中Python处理的URL函数就是C：`Controller`，`Controller`主要负责业务逻辑，比如检查用户名是否存在，取出用户信息等等；
+- 而`View`负责显示逻辑，通过一些简单的替换变量，View生成最终用户看到的HTML，那`View`实质就是HTML模板（如`Django`等），而在本次Web开发就是`Jinja2`模板；
+- `Model`是用来传给View的，这样View在替换变量的时候，就可以从`Model`中取出相应的数据。
+
+当ORM框架、Web框架、配置就绪，就可以编写MVC，将其全部启动起来。对应的页面处理编写相对应的URL函数。使用 `'__template__'`指定模板(`html`)。
+```python3
+import re, time, json, logging, hashlib, base64, asyncio
+
+from coroweb import get, post
+
+from models import User, Comment, Blog, next_id
+
+@get('/')
+async def index(request):
+    users = await User.findAll()
+    return {
+        '__template__': 'test.html',
+        'users': users
+    }
+```
+
