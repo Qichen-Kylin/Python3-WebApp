@@ -2,7 +2,7 @@
 基于Python3的Web开发
 
 ## HTTP请求的生命周期
-![项目流程图](https://github.com/Qichen-Kylin/Python3-WebApp/blob/develop/www/static/img/FlowChart.png)
+![项目流程图](https://github.com/Qichen-Kylin/Python3-WebApp/blob/develop/www/app/static/img/FlowChart.png)
 
 1. 客户端（浏览器）发起请求  
 2. 路由分发请求（这个框架自动帮处理），add_routes函数就是注册路由。  
