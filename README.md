@@ -307,3 +307,69 @@ async def index(request):
     }
 ```
 
+## Day-8 构建前端
+ - 简单的`MVC`页面不会令人满意。对于复杂的HTML前端页面来说，我们需要一套基础的`CSS`架构来完成页面布局和基本样式。另外`jQuery`作为操作DOM的`JavaScript`库也必不可少。
+ - 从零开始写`CSS`不如直接从一个已有的功能完善的`CSS`框架开始，有很多这样的框架可以选择，这里这次选择[**`uikit`**](https://getuikit.com/ "从uikit首页下载打包的资源文件")这个强大的`CSS`框架。它具有完善的响应式布局、漂亮的UI，以及丰富的HTML组件。
+> Uikit：A lightweight and modular front-end framework for developing fast and powerful web interfaces.（轻量级和模块化的前端框架，用于开发快速和强大的web接口。）
+
+- 所有的静态资源文件统一放在 `www/app/static`目录下，并按照类别归类：
+```markdown
+static/
++- css/
+| +- addons/
+| | +- uikit.addons.min.css
+| | +- uikit.almost-flat.addons.min.css
+| | +- uikit.gradient.addons.min.css
+| +- awesome.css
+| +- uikit.almost-flat.addons.min.css
+| +- uikit.gradient.addons.min.css
+| +- uikit.min.css
++- fonts/
+| +- fontawesome-webfont.eot
+| +- fontawesome-webfont.ttf
+| +- fontawesome-webfont.woff
+| +- FontAwesome.otf
++- js/
++- awesome.js
++- html5.js
++- jquery.min.js
++- uikit.min.js
+```
+- 由于前端页面通常情况下不是首页一个页面，每个页面都有相同的页眉和页脚。常见的模板引擎已经考虑到了页面上重复`HTML`部分的复用问题。有的模板通过`include`把页面分为三个部分：
+```html5
+<html>
+    <% include file="inc_header.html" %>
+    <% include file="index_body.html" %>
+    <% include file="inc_footer.html" %>
+</html>
+```
+这样相同的部分`inc_header.html`和`inc_footer.html`就可以共享。
+
+- 但是`include`方法不利于页面整体结构和维护。`jinjia2`的模板还有一种“继承”方式，实现模板的复用更简单。这种模板方式是编写一个“父模板”，在父模板中定义一些可替换的`Block`（块）。然后编写多个"子模板"，每个子模板都可以只替换父模板定义的`block`。比如父模板定义：
+```html5
+<!-- __base.html__ -->
+<html>
+    <head>
+        {% block meta %}<!-- block meta  -->{% endblock %}
+        <title>{% block title %} ? {% endblock %} - Awesome Python Webapp</title>
+        {% block beforehead %}<!-- before head  -->{% endblock %}
+    </head>
+    <body>
+        {% block content %} <!-- content -->{% endblock %}
+    </body>
+</html>
+```
+- 对于子模板，只需要将父模板中定义的对应`block`替换掉就行：
+```html5
+<!-- A.html -->
+{% extends '__base__.html' %} <!-- 继承父模板标识  -->
+{% block title %} A {% endblock %} <!-- 替换title block，覆盖页面的标题  -->
+{% block beforehead %} <!-- 子页面在<head>标签关闭前插入JavaScript代码  -->
+<script>
+</script>
+{% endblock %}
+{% block content %} <!-- 子页面content布局和内容  -->
+    ...
+{% endblock %}
+```
+> 在浏览器看到的画面，都是有浏览器解释才呈现出来的。实质它是一段HTML代码，外加JavaScript、CSS构成。如果把网页比作一个人，那么HTML便是他的骨架；JavaScript是肌肉；CSS是衣服。
