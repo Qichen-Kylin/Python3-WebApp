@@ -7,7 +7,7 @@ Configuration
 
 __author__ = 'Kylin'
 
-import config_default
+import config.config_default
 
 class Dict(dict):
     '''
