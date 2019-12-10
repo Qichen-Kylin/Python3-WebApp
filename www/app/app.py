@@ -15,6 +15,8 @@ from datetime import datetime
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
+from config.config import configs
+
 import orm
 from coroweb import add_routes, add_static
 from factories import logger_factory, data_factory, response_factory
@@ -56,7 +58,7 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='10.80.36.17', port=3306, user='webapp', password='123456', database='webapp')
+    await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])

@@ -373,3 +373,23 @@ static/
 {% endblock %}
 ```
 > 在浏览器看到的画面，都是有浏览器解释才呈现出来的。实质它是一段HTML代码，外加JavaScript、CSS构成。如果把网页比作一个人，那么HTML便是他的骨架；JavaScript是肌肉；CSS是衣服。
+
+
+## Day-9 编写API
+- 如果一个URL返回的不是HTML，而是机器可以直接解析的数据，这个URL可以看成是一个WebAPI。比如读取`http://localhost:9000/api/blogs/123`，如果能直接返回Blog数据，那么机器就可以直接读取。
+
+- `REST`(*英文全称是 Representational State Transfer ，翻译成中文是“表述性状态转移”*)就是一种设计API的模式。最常见的格式是`JSON`。由于JSON能直接被JavaScript读取，所以，以JSON格式编写的REST风格的API具有简单、易读、易用的特点。
+
+- 编写API的好处：由于API就是把WebApp的功能全部封装了，所以，通过API操作数据，可以极大地把前端和后端代码隔离，使得后端代码易于测试，前端代码编写更加简单。
+
+- 一个API就是一个URL处理函数，可以直接通过一个`@api`来吧函数变成JSON格式的REST API。
+
+```python3
+@get('/api/users')
+def api_get_users():
+    users = yield from User.findAll(orderBy='created_at desc')
+    for u in users:
+        u.passwd = '******'
+    return dict(users=users)
+```
+- 只要返回一个`dict` ，后续的`response`这个`middleware`就可以把结果序列化为JSON并返回。
