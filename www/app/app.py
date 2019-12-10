@@ -15,7 +15,7 @@ from datetime import datetime
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
-from config.config import configs
+import config.config
 
 import orm
 from coroweb import add_routes, add_static
