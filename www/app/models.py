@@ -48,6 +48,7 @@ class Comment(Model):
     content = TextField()
     created_at = FloatField(default=time.time)
 
+'''
 #测试
 if __name__== '__main__':
     
@@ -64,3 +65,4 @@ if __name__== '__main__':
     __pool.close()                               
     loop.run_until_complete(__pool.wait_closed())
     loop.close()
+'''
