@@ -6,6 +6,8 @@ __author__ = 'Kylin'
 import logging
 import asyncio 
 import aiomysql
+from boto.compat import StandardError
+
 
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)
@@ -23,7 +25,7 @@ async def create_pool(loop, **kw):
         port=kw.get('port', 3306),        #port参数是3306，标准默认port
         user=kw['user'],
         password=kw['password'],
-        db=kw['db'],
+        db=kw['database'],
         charset=kw.get('charset', 'utf8'), #charset参数是utf8
         autocommit=kw.get('autocommit', True),
         maxsize=kw.get('maxsize', 10),
