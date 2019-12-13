@@ -24,10 +24,9 @@ def index(request):
         'blogs': blogs
     }
 
-
 @get('/api/users')
-def api_get_users():
-    users = yield from User.findAll(orderBy='created_at desc')
+async def api_get_users():
+    users = await User.findAll(orderBy='created_at desc')
     for u in users:
         u.passwd = '******'
     return dict(users=users)
