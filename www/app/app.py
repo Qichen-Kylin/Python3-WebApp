@@ -19,7 +19,9 @@ from config import configs
 
 import orm
 from coroweb import add_routes, add_static
-from factories import logger_factory, data_factory, response_factory
+
+from factories import logger_factory, auth_factory, data_factory, response_factory
+
 
 #初始化jinja2，以便其他函数使用jinja2模板
 def init_jinja2(app, **kw):
@@ -60,7 +62,7 @@ def datetime_filter(t):
 async def init(loop):
     await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+        logger_factory, auth_factory, response_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')

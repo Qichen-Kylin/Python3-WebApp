@@ -153,7 +153,7 @@ loop.run_forever()
 ### 封装SELECT操作
 - 封装`SELECT`操作为`select()`函数执行，需要传入SQL语句及SQL参数：
 - SQL语句占位符是`？`，而MySQL占位符是`%s`,`select()`函数内部自动替换。*注意要始终坚持使用带参数的SQL，而不是自己拼接SQL字符串，这样可以防止SQL注入攻击。*
-- `cur.execute(&#39;select * from user where id = %s&#39;, (&#39;1&#39;,))`
+- `cur.execute('select * from user where id = %s', ('1',))`
 - 如果传入size参数，就通过`fetchmany`获得最多指定数量的记录，否则就通过`fetchall`获得所有记录。
 
 ### 封装INSERT,UPDATE,DELETE操作
@@ -393,3 +393,28 @@ def api_get_users():
     return dict(users=users)
 ```
 - 只要返回一个`dict` ，后续的`response`这个`middleware`就可以把结果序列化为JSON并返回。
+
+
+## Day-10 用户注册和登录
+> 用户管理是绝大部分Web网站都需要解决的问题，涉及用户注册和登录。
+
+- **用户注册**
+1. 用户注册功能通过API先实现用户注册功能：代码中部分为`@post('/api/users')`。
+*需要注意的是用户口令是客户端传递的经过`SHA1`计算后的40位Hash字符串，所以服务器端并不知道用户的原始口令。* 
+1. 接下来创建一个注册界面给用户填写注册表单，然后提交数据到注册用户的API。代码中部分为`templates/register.html`。
+
+- **用户登录**
+1. 用户登录要比用户注册复杂。由于`HTTP协议`是一种无状态协议，而服务器要跟踪用户状态，就只能通过`cookie`实现。大多数Web框架提供了`Session`功能来封装保存用户状态的`cookie`。
+1. Session的优点是简单易用，可以直接从Session中取出用户登录信息。
+1. Session的缺点是服务器需要在内从中维护一个映射表来存储用户的登录信息，如果服务器是两台及以上，就需要对Session做集群，因此，使用Session的Web App很难扩展。
+1. 这里采用直接读取cookie的方式来验证用户登录，每次用户访问任意URL，都会对cookie进行验证，这种方式的好处就是保证服务器处理任意的URL都是无状态的，可以拓展到多台服务器。
+1. 由于登录成功后是由服务器生成一个cookie发送给浏览器，所以，要保证这个cookie不会被客户端伪造出来。实现防伪造的cookie的关键使用过一个单向算法（例如：SHA1），举例如下：
+> 当用户输入了正确的口令登录成功后，服务器可以从数据库取到用户的id，并按照如下的方式计算出一个字符串：
+`"用户id"+"过期时间"+SHA1("用户id"+"用户口令"+"过期时间"+"SecretKey")`
+当浏览器发送cookie到服务器端后，服务器可以拿到的信息包括：用户id、过期时间、SHA1值。如果未到过期时间，服务器就根据用户id查找用户口令，并计算：
+`SHA1("用户id"+"用户口令"+"过期时间"+"SecretKey")`，并与浏览器cookie中的哈希进行比较，如果相等，则说明用户已经登录，否则，cookie就是伪造的。
+这个算法的关键就是在于SHA1是一种单向算法，即是可以通过原始字符串可以计算出SHA1结果，但是无法通过SHA1结果反推出原始字符串。
+
+1. 登录的API实现在是代码中为`@post('/api/authenticate')`，以及计算加密cookie函数为`def user2cookie(user, max_age)`。
+1. 对于每个URL处理函数，都去解析cookie的代码，那会导致代码重复好多次。
+1. 如果利用middle在处理URL之前，把cookie解析出来，cookie解析协程函数为`async def cookie2user(cookie_str)`，并将登录用户绑定在request对象上，这样，后续的URL处理函数就可以直接拿到登录用户，对应程序中的协程函数为`async def auth_factory(app, handler)`。这样便完成了用户管理中的用户注册和登录功能。
