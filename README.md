@@ -173,7 +173,6 @@ loop.run_forever()
 - 基类中方法都基于`asyncio`的装饰，所以方法都是协程。
 - 任何继承自`Model`的类，会自动通过`ModelMetaclass`扫描映射关系，并存储到自身的类属性中。
 
-# WebApp实战
 ## Day-4 编写models
 **有了`ORM`，就可以把`WebApp`需要的表用`Model`表示出来：`models.py`**
 - 在编写`ORM`时，给每个`Field`增加一个`default`参数可以让ORM自己填入缺省值，非常方便。并且缺省值可以作为函数对象传入，在调用`save()`时自动计算。
@@ -453,9 +452,11 @@ sha1.update(user.id.encode('utf-8'))
 sha1.update(b':')
 sha1.update(passwd.encode('utf-8'))
 ```
+
 然后对比两个密码，判断是否登陆。
 `if user.passwd != sha1.hexdigest()`
-如果认证通过，更新cookie。最后通过signin.html中的location.assign('/');来跳转到主页面，并传递用户信息到blogs.html中。完成右上角的信息请求。
+如果认证通过，更新`cookie`。最后通过`signin.html`中的`location.assign('/')`;来跳转到主页面，并传递用户信息到`blogs.html`中。完成右上角的信息请求。
+
 ---
 [原文链接](https://blog.csdn.net/suyiwei5993/article/details/83627395)
 
@@ -532,31 +533,31 @@ $ pymonitor.py app.py
 - 用户注册时，`users`表中`admin`字段置为**0**的，管理员用户需要将其修改为**1**.
 
 - **后端API包括：**
-```Markdown
-[x] •获取日志：GET /api/blogs
-[x] •创建日志：POST /api/blogs
-[x] •修改日志：POST /api/blogs/:blog_id
-[x] •删除日志：POST /api/blogs/:blog_id/delete
-[x] •获取评论：GET /api/comments
-[x] •创建评论：POST /api/blogs/:blog_id/comments
-[x] •删除评论：POST /api/comments/:comment_id/delete
-[x] •创建新用户：POST /api/users
-[x] •获取用户：GET /api/users
-```
+
+    [x] •获取日志：GET /api/blogs
+    [x] •创建日志：POST /api/blogs
+    [x] •修改日志：POST /api/blogs/:blog_id
+    [x] •删除日志：POST /api/blogs/:blog_id/delete
+    [x] •获取评论：GET /api/comments
+    [x] •创建评论：POST /api/blogs/:blog_id/comments
+    [x] •删除评论：POST /api/comments/:comment_id/delete
+    [x] •创建新用户：POST /api/users
+    [x] •获取用户：GET /api/users
+
 - **管理页面包括：**
-```Markdown
-[x] •评论列表页：GET /manage/comments
-[x] •日志列表页：GET /manage/blogs
-[x] •创建日志页：GET /manage/blogs/create
-[x] •修改日志页：GET /manage/blogs/edit
-[x] •用户列表页：GET /manage/users
-```
+
+    [x] •评论列表页：GET /manage/comments
+    [x] •日志列表页：GET /manage/blogs
+    [x] •创建日志页：GET /manage/blogs/create
+    [x] •修改日志页：GET /manage/blogs/edit
+    [x] •用户列表页：GET /manage/users
+
 - **用户浏览页面包括：**
-```Markdown
-[x] •注册页：GET /register
-[x] •登录页：GET /signin
-[x] •注销页：GET /signout
-[x] •首页：GET /
-[x] •日志详情页：GET /blog/:blog_id
-```
+
+    [x] •注册页：GET /register
+    [x] •登录页：GET /signin
+    [x] •注销页：GET /signout
+    [x] •首页：GET /
+    [x] •日志详情页：GET /blog/:blog_id
+
 把所有的功能实现，我们第一个Web App就宣告完成！
