@@ -33,12 +33,12 @@ async def logger_factory(app, handler):
         # await asyncio.sleep(0.3)
         return (await handler(request))
     return logger
-
+# 提取并解析cookie并绑定在request对象上
 async def auth_factory(app, handler):
     async def auth(request):
         logging.info('check user: %s %s' % (request.method, request.path))
-        request.__user__ = None
-        cookie_str = request.cookies.get(COOKIE_NAME)
+        request.__user__ = None #初始化用户名
+        cookie_str = request.cookies.get(COOKIE_NAME) #读取cookie
         if cookie_str:
             user = await cookie2user(cookie_str)
             if user:

@@ -61,6 +61,7 @@ def datetime_filter(t):
 
 async def init(loop):
     await orm.create_pool(loop=loop, **configs.db)
+    #将middlewares注册到app信息中：
     app = web.Application(loop=loop, middlewares=[
         logger_factory, auth_factory, response_factory
     ])

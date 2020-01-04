@@ -10,7 +10,7 @@ function validateEmail(email) {
     var re = /^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$/;
     return re.test(email.toLowerCase());
 }
-
+<!-- 网页关闭前执行的具体函数 -->
 $(function () {
     var vm = new Vue({
         el: '#vm',
