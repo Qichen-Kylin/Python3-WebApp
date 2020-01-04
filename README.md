@@ -23,6 +23,7 @@
 ***2019-11-19 星期二***
 1. 确认当前系统安装的Python版本：
 ```Markdown
+(base) C:\Windows\system32>python -m pip install --upgrade pip
 (base) C:\Windows\system32>python --version
 Python 3.6.5 :: Anaconda, Inc.
 ```
