@@ -49,6 +49,7 @@ def user2cookie(user, max_age):
 def text2html(text):
     lines = map(lambda s: '<p>%s</p>' % s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), filter(lambda s: s.strip() != '', text.split('\n')))
     return ''.join(lines)
+
 # 解释cookie，此处需要异步，进行阻塞等待。
 async def cookie2user(cookie_str):
     '''
@@ -93,7 +94,7 @@ def index(request):
     }
 
 @get('/blog/{id}')
-async def get_blog(id):
+async def get_blog(*, request, id):
     blog = await Blog.find(id)
     comments = await Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
     for c in comments:
@@ -102,7 +103,8 @@ async def get_blog(id):
     return {
         '__template__': 'blog.html',
         'blog': blog,
-        'comments': comments
+        'comments': comments,
+        '__user__': request.__user__
     }
 # 注册界面
 @get('/register')
@@ -149,6 +151,15 @@ def signout(request):
     r.set_cookie(COOKIE_NAME, '-deleted-', max_age=0, httponly=True)
     logging.info('user signed out.')
     return r
+
+@get('/manage/blogs')
+def manage_blogs(*, request, page='1'):
+    return {
+        '__template__': 'manage_blogs.html',
+        'page_index': get_page_index(page),
+        '__user__': request.__user__
+    }
+
 #创建博客、写博客
 @get('/manage/blogs/create')
 def manage_create_blog(request):
@@ -177,7 +188,7 @@ async def api_register_user(*, email, name, passwd):
     # 注册到数据库上，此处将uid调到外部来，是因为在后面的密码存储摘要算法时要进行计算。
     uid = next_id()
     sha1_passwd = '%s:%s' % (uid, passwd)
-    user = User(id=uid, name=name.strip(), email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(), image='http://www.gravatar.com/avatar/%s?d=mm&s=120' % hashlib.md5(email.encode('utf-8')).hexdigest())
+    user = User(id=uid, name=name.strip(), email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(), image='https://github.com/Qichen-Kylin/Python3-WebApp/blob/master/www/app/static/img/user.png' % hashlib.md5(email.encode('utf-8')).hexdigest())
     await user.save()
     # make session cookie，并返回浏览器客户端
     r = web.Response()
@@ -187,6 +198,16 @@ async def api_register_user(*, email, name, passwd):
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     # 返回r用于register.html网页的JavaScript部分继续执行
     return r
+
+@get('/api/blogs')
+async def api_blogs(*, page='1'):
+    page_index = get_page_index(page)
+    num = await Blog.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, blogs=())
+    blogs = await Blog.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, blogs=blogs)
 
 @get('/api/blogs/{id}')
 async def api_get_blog(*, id):

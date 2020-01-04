@@ -487,3 +487,23 @@ sha1.update(passwd.encode('utf-8'))
 
 - 需要特别注意的是，在MVVM中，Model和View是双向绑定的。如果我们在Form中修改了文本框中的值，可以在Model中立刻拿到新的值。
 - 双向绑定是MVVM框架最大的作用。借助MVVM，我们把最复杂的显示逻辑交给框架完成。由于后端编写了独立的REST API，所以，前端用AJAX提交表单非常容易，前后端分离得非常彻底。
+
+## Day-12 编写日志列表页
+
+- `MVVM`模式不但可用于Form表单，在复杂的管理页面中也能大显身手。例如，分页显示Blog的功能，我们先把后端代码写出来： 在`apis.py`中定义一个Page类用于存储分页信息：`class Page(object)`。
+- 在`handlers.py`中编写API实现接口用于数据库返回日志。`@get('/api/blogs')`。
+- 编写管理页面 REST API：`@get('/manage/blogs')`。
+- 模板页面首先通过API：`GET /api/blogs?page=?`拿到Model：
+```python
+{
+    "page": {
+        "has_next": true,
+        "page_index": 1,
+        "page_count": 2,
+        "has_previous": false,
+        "item_count": 12
+    },
+    "blogs": [...]
+}
+```
+- 然后，通过Vue初始化MVVM:`templates/manage_blogs.html`。View的容器是`#vm`，包含一个`table`，我们用`v-repeat`可以把`Model`的数组`blogs`直接变成多行的`<tr>`;可以把`v-repeat=”blog: blogs”`看成循环代码，所以，可以在一个内部引用循环变量blog。`v-text`和`v-attr`指令分别用于生成文本和DOM节点属性。
