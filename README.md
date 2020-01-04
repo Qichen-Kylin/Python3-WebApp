@@ -402,6 +402,11 @@ def api_get_users():
 1. 用户注册功能通过API先实现用户注册功能：代码中部分为`@post('/api/users')`。
 *需要注意的是用户口令是客户端传递的经过`SHA1`计算后的40位Hash字符串，所以服务器端并不知道用户的原始口令。* 
 1. 接下来创建一个注册界面给用户填写注册表单，然后提交数据到注册用户的API。代码中部分为`templates/register.html`。
+> 这里的流程是首先浏览器输入http://localhost:9000/，进入主页面，点击右上角注册，__base.html中通过链接跳转到http://localhost:9000/register网页，触发handlers.py文件中的@get('/register')请求，加载register.html网页，填写好信息后，点击提交按钮，会触发register.html的block beforehead部分的JavaScript代码。JavaScript代码的主要几个步骤为：
+1：校验输入值是否正确。
+2：针对密码生成SHA1值。
+3：执行@get(’/api/users’)函数，在该部分提交信息，并向浏览器返回cookie。
+4：完成后返回主页。
 
 - **用户登录**
 1. 用户登录要比用户注册复杂。由于`HTTP协议`是一种无状态协议，而服务器要跟踪用户状态，就只能通过`cookie`实现。大多数Web框架提供了`Session`功能来封装保存用户状态的`cookie`。
@@ -418,3 +423,67 @@ def api_get_users():
 1. 登录的API实现在是代码中为`@post('/api/authenticate')`，以及计算加密cookie函数为`def user2cookie(user, max_age)`。
 1. 对于每个URL处理函数，都去解析cookie的代码，那会导致代码重复好多次。
 1. 如果利用middle在处理URL之前，把cookie解析出来，cookie解析协程函数为`async def cookie2user(cookie_str)`，并将登录用户绑定在request对象上，这样，后续的URL处理函数就可以直接拿到登录用户，对应程序中的协程函数为`async def auth_factory(app, handler)`。这样便完成了用户管理中的用户注册和登录功能。
+
+> 密码生成
+从上一节中，可以看出密码生成的步骤如下：
+1 ：在register.html文件中的JavaScript将passward进行第一次包装，生成A，传递到@get(’/api/users’)中。
+`CryptoJS.SHA1(email + ':' + this.password1).toString()`
+2：@post(’/api/users’)绑定函数接下来对A进行第二次包装，生成B。
+`sha1_passwd = '%s:%s' % (uid, passwd)`
+3：user2cookie函数对B进行第三次包装，生成C。
+```python
+#id-B-到期时间-秘钥
+expires = str(int(time.time() + max_age))
+s = '%s-%s-%s-%s' % (user.id, user.passwd, expires, _COOKIE_KEY)
+```
+4： 返回用户id-到期时间-C
+```python
+#用户id-到期时间-C
+L = [user.id, expires, hashlib.sha1(s.encode('utf-8')).hexdigest()]
+```
+
+>密码比较
+在用户cookie未到期时，对用户认证的时候，通过signin.html里的SHA1(email+password)值对password进行包装生成A。
+`passwd: this.passwd==='' ? '' : CryptoJS.SHA1(email + ':' + this.passwd).toString()`
+接下来运行handlers中@post('/api/authenticate')的绑定函数，对密码进行再次包装生成B。
+```python 
+#check passwd:
+sha1 = hashlib.sha1()
+sha1.update(user.id.encode('utf-8'))
+sha1.update(b':')
+sha1.update(passwd.encode('utf-8'))
+```
+然后对比两个密码，判断是否登陆。
+`if user.passwd != sha1.hexdigest()`
+如果认证通过，更新cookie。最后通过signin.html中的location.assign('/');来跳转到主页面，并传递用户信息到blogs.html中。完成右上角的信息请求。
+---
+[原文链接](https://blog.csdn.net/suyiwei5993/article/details/83627395)
+
+
+## Day-11 编写日志创建页
+- 在编写完ORM框架，web开发框架之后，后端代码写起来就相对的比较轻松了，现在编写一个REST API ,用来创建blog：`@post('/api/blogs')`。
+
+- Web开发真正困难的地方就是编写前端页面。前端页面需要混合HTML、CSS和JavaScript，如果对这三者没有深入地掌握，编写的前端页面将很快难以维护。
+- 更大的问题在于前端页面通常是动态页面，也就是说，前端页面往往是由后端代码生成的。ASP、JSP、PHP等都是用以下这种模板方式生成前端页面。
+
+- 如果在页面上要使用大量的javaScript，这样的模板会导致JavaScript代码与后端代码绑得非常紧密，以至于难以维护。**根本原因还是：负责显示的DOM模型(Document Object Model)与负责数据和交互的JavaScript代码没有分割清楚。**
+
+- 所以新的MVVM：Model View ViewModel模式应运而生。个人认为这个MVVM就是基于前端页面的MVC。
+
+- 在前端页面中，用纯JavaScript对象表示Model，而View则是纯HTML。
+- Model表示数据，View负责显示，两者做到了最大限度的分离。
+- ViewModel作用是把Model和View关联起来的。ViewModel负责把Model的数据同步到View显示出来，还负责把View的修改同步回Model。
+
+- ViewModel如何编写？需要用JavaScript编写一个通用的ViewModel，这样，就可以复用整个MVVM模型了。
+
+- 已经有很多成熟的MVVM框架可以使用，如AngularJS，KnockoutJS等，我们这里选择[Vue](https://vuejs.org/ "Vue")这个简单易用的MVVM框架来实现创建Blog的页面`templates/manage_blog_edit.html`。
+
+-  初始化Vue时，我们指定3个参数：
+1. el:根据选择器查找绑定的View，这里是#VM，就是id为VM的DOM，对应的是一个<div>标签；
+1. data：JavaScript对象表示的Model，我们初始化为`{name: '', summary: '', content: ''}`；
+1. Models：View可以触发的JavaScript函数，submit就是提交表单时创建的函数。
+-  接下来，我们在`<Form>`标签中，用几个简单的`v-model`,就可以让Vue把Model和View关联起来。
+- Form表单通过`<form v-on="submit: submit">`把提交表单的事件关联到`submit`方法。
+
+- 需要特别注意的是，在MVVM中，Model和View是双向绑定的。如果我们在Form中修改了文本框中的值，可以在Model中立刻拿到新的值。
+- 双向绑定是MVVM框架最大的作用。借助MVVM，我们把最复杂的显示逻辑交给框架完成。由于后端编写了独立的REST API，所以，前端用AJAX提交表单非常容易，前后端分离得非常彻底。
