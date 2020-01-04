@@ -519,10 +519,10 @@ sha1.update(passwd.encode('utf-8'))
 - 利用`Python`自带的`subprocess`实现进程的启动和停止，并把输入输出重定向到当前进程的输入和输出。
 
 - 启动服务器：
-1. `$ python3 pymonitor.py app.py`;
-1. ```Markdown
-    chomd u+x pymonitor.py
-    $ pymonitor.py app.py
+1、`$ python3 pymonitor.py app.py`;
+2、```Markdown
+chomd u+x pymonitor.py
+$ pymonitor.py app.py
 ```
 
 ## Day-14 完成WebApp
