@@ -523,3 +523,40 @@ sha1.update(passwd.encode('utf-8'))
 chomd u+x pymonitor.py
 $ pymonitor.py app.py
 ```
+
+## Day-14 完成WebApp
+
+- 在`WebApp`框架和基本流程跑通后，剩下的工作全部是体力活了：在`Debug`开发模式下完成后端所有API、前端所有页面。我们需要做的事情包括：
+
+- 把当前用户绑定到`request`上，并对`URL/manage/`进行拦截，检查当前用户是否是管理员身份，功能实现为工厂函数：`async def data_factory(app, handler)`。
+- 用户注册时，`users`表中`admin`字段置为**0**的，管理员用户需要将其修改为**1**.
+
+- **后端API包括：**
+```Markdown
+[x] •获取日志：GET /api/blogs
+[x] •创建日志：POST /api/blogs
+[x] •修改日志：POST /api/blogs/:blog_id
+[x] •删除日志：POST /api/blogs/:blog_id/delete
+[x] •获取评论：GET /api/comments
+[x] •创建评论：POST /api/blogs/:blog_id/comments
+[x] •删除评论：POST /api/comments/:comment_id/delete
+[x] •创建新用户：POST /api/users
+[x] •获取用户：GET /api/users
+```
+- **管理页面包括：**
+```Markdown
+[x] •评论列表页：GET /manage/comments
+[x] •日志列表页：GET /manage/blogs
+[x] •创建日志页：GET /manage/blogs/create
+[x] •修改日志页：GET /manage/blogs/edit
+[x] •用户列表页：GET /manage/users
+```
+- **用户浏览页面包括：**
+```Markdown
+[x] •注册页：GET /register
+[x] •登录页：GET /signin
+[x] •注销页：GET /signout
+[x] •首页：GET /
+[x] •日志详情页：GET /blog/:blog_id
+```
+把所有的功能实现，我们第一个Web App就宣告完成！
