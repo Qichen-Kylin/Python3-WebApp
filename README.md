@@ -519,12 +519,9 @@ sha1.update(passwd.encode('utf-8'))
 - 利用`Python`自带的`subprocess`实现进程的启动和停止，并把输入输出重定向到当前进程的输入和输出。
 
 - 启动服务器：
-1、`$ python3 pymonitor.py app.py`;
-2、```Markdown
-chomd u+x pymonitor.py
-$ pymonitor.py app.py
-```
-
+1. `$ python3 pymonitor.py app.py`;
+1. `chomd u+x pymonitor.py`
+   `$ pymonitor.py app.py`
 ## Day-14 完成WebApp
 
 -在`WebApp`框架和基本流程跑通后，剩下的工作全部是体力活了：在`Debug`开发模式下完成后端所有API、前端所有页面。我们需要做的事情包括：
