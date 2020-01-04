@@ -20,7 +20,7 @@
 <head>
     <meta charset="utf-8" />
     {% block meta %}<!-- block meta  -->{% endblock %}
-    <title>{% block title %} ? {% endblock %} - Awesome Python Webapp</title>
+    <title>{% block title %} ? {% endblock %} - Python3 Webapp</title>
     <link rel="stylesheet" href="/static/css/uikit.min.css">
     <link rel="stylesheet" href="/static/css/uikit.gradient.min.css">
     <link rel="stylesheet" href="/static/css/awesome.css" />
@@ -35,10 +35,10 @@
 <body>
     <nav class="uk-navbar uk-navbar-attached uk-margin-bottom">
         <div class="uk-container uk-container-center">
-            <a href="/" class="uk-navbar-brand">Awesome</a>
+            <a href="/" class="uk-navbar-brand">Blog@Kylin</a>
             <ul class="uk-navbar-nav">
                 <li data-url="blogs"><a href="/"><i class="uk-icon-home"></i> 日志</a></li>
-                <li><a target="_blank" href="#"><i class="uk-icon-book"></i> 教程</a></li>
+                <li><a target="_blank" href="https://blog.csdn.net/lvsehaiyang1993/article/details/80972844"><i class="uk-icon-book"></i> 教程</a></li>
                 <li><a target="_blank" href="https://github.com/Qichen-Kylin/Python3-WebApp"><i class="uk-icon-code"></i> 源码</a></li>
             </ul>
             <div class="uk-navbar-flip">
@@ -48,9 +48,11 @@
                         <a href="#0"><i class="uk-icon-user"></i> {{ __user__.name }}</a>
                         <div class="uk-dropdown uk-dropdown-navbar">
                             <ul class="uk-nav uk-nav-navbar">
-                                <li><a href="/manage/blogs"><i class="uk-icon-sign-in"></i>日志列表</a></li>
                                 <li><a href="/manage/blogs/create"><i class="uk-icon-sign-in"></i>创建日志</a></li>
-                                <li><a href="/signout"><i class="uk-icon-sign-out"></i> 登出</a></li>
+                                <li><a href="/manage/comments"><i class="uk-icon-sign-in"></i>评论列表</a></li>
+                                <li><a href="/manage/blogs"><i class="uk-icon-sign-in"></i>日志列表</a></li>
+                                <li><a href="/manage/users"><i class="uk-icon-sign-in"></i>用户列表</a></li>
+                                <li><a href="/signout"><i class="uk-icon-sign-out"></i> 退出 </a></li>
                             </ul>
                         </div>
                     </li>
@@ -82,7 +84,7 @@
                     <a target="_blank" href="#" class="uk-icon-button uk-icon-linkedin-square"></a>
                     <a target="_blank" href="#" class="uk-icon-button uk-icon-twitter"></a>
                 </p>
-                <p>Powered by <a href="http://awesome.kylin.com">Awesome Python Webapp</a>. Copyright &copy; 2014. [<a href="/manage/" target="_blank">Manage</a>]</p>
+                <p>Powered by <a href="http://www.kylin.com">Kylin(ChenQi)</a>. Copyright &copy; 2014. [<a href="/manage/" target="_blank">Manage</a>]</p>
                 <p><a href="http://www.chenqi.com/" target="_blank">www.chenqi.com</a>. All rights reserved.</p>
                 <a target="_blank" href="http://www.w3.org/TR/html5/"><i class="uk-icon-html5" style="font-size:64px; color: #444;"></i></a>
             </div>
