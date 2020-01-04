@@ -507,3 +507,19 @@ sha1.update(passwd.encode('utf-8'))
 }
 ```
 - 然后，通过Vue初始化MVVM:`templates/manage_blogs.html`。View的容器是`#vm`，包含一个`table`，我们用`v-repeat`可以把`Model`的数组`blogs`直接变成多行的`<tr>`;可以把`v-repeat=”blog: blogs”`看成循环代码，所以，可以在一个内部引用循环变量blog。`v-text`和`v-attr`指令分别用于生成文本和DOM节点属性。
+
+## Day-13 提升开发效率
+
+- 每次修改代码，都必须在命令行先`Ctrl-C`停止服务器，再重启，改动才能生效。
+- 有没有办法让服务器检测到代码修改后自动重新加载呢？思路是检测www目录下的代码改动，一旦有改动，就自动重启服务器。
+- 按照思路，我们可以编写一个辅助程序`pymonitor.py`，让它启动`app.py`，并时刻监控www目录下的代码改动，有改动时，先把当前`app.py`进程杀掉，再重启，就完成了服务器进程的自动重启。
+- 这里使用得是Python第三方库`watchdog`：`pip install watchdog`
+- 利用`watchdog`接收文件变化的通知，如果是`.py`文件，就自动重启`app.py`进程。
+- 利用`Python`自带的`subprocess`实现进程的启动和停止，并把输入输出重定向到当前进程的输入和输出。
+
+- 启动服务器：
+1. `$ python3 pymonitor.py app.py`;
+1. ```bash
+chomd u+x pymonitor.py
+$ pymonitor.py app.py
+```
