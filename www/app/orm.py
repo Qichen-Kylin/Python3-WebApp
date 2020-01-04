@@ -162,7 +162,7 @@ class ModelMetaclass(type):
 #基类`Model`负责执行操作，比如数据库的存储、读取，查找等操作等
 class Model(dict, metaclass=ModelMetaclass): #从元类创建类：指定元类 metaclass=ModelMetaclass
 
-    def __init__(self, **kw):
+    def __init__(self, **kw) -> object:
         super(Model, self).__init__(**kw)
 
     def __getattr__(self, key):

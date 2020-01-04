@@ -13,6 +13,8 @@ import asyncio, json
 
 from aiohttp import web
 
+from handlers import cookie2user, COOKIE_NAME
+
 '''
 middleware:
 
@@ -31,7 +33,21 @@ async def logger_factory(app, handler):
         # await asyncio.sleep(0.3)
         return (await handler(request))
     return logger
-
+# 提取并解析cookie并绑定在request对象上
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None #初始化用户名
+        cookie_str = request.cookies.get(COOKIE_NAME) #读取cookie
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+            return web.HTTPFound('/signin')
+        return (await handler(request))
+    return auth
 
 async def data_factory(app, handler):
     async def parse_data(request):

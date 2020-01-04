@@ -17,6 +17,7 @@ def log(sql, args=()):
 - 使用连接池的好处是不必频繁地打开和关闭数据库连接，而是能复用就尽量复用。
 - 连接池由全局变量`__pool`存储，缺省情况下将编码设置为`utf8`，自动提交事务。
 '''
+@asyncio.coroutine
 async def create_pool(loop, **kw):
     logging.info('create database connection pool...')
     global __pool
@@ -39,6 +40,7 @@ async def create_pool(loop, **kw):
 - `cur.execute('select * from user where id = %s', ('1',))`
 - 如果传入size参数，就通过`fetchmany`获得最多指定数量的记录，否则就通过`fetchall`获得所有记录。
 '''
+@asyncio.coroutine
 async def select(sql, args, size=None):
     log(sql, args)
     global __pool
@@ -56,6 +58,7 @@ async def select(sql, args, size=None):
 - 要执行`INSERT`、`UPDATE`、`DELETE`语句，可以定义一个通用的`execute()`函数，因为这3类SQL的执行都需要相同的参数，以及返回一个整数表示影响的行数。
 - `execute()`函数与`select()`函数所不同的是，cursor对象不返回结果集，而是通过`rowcount`返回结果数。
 '''
+@asyncio.coroutine
 async def execute(sql, args, autocommit=True):
     log(sql)
     async with __pool.get() as conn:

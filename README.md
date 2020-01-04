@@ -153,7 +153,7 @@ loop.run_forever()
 ### 封装SELECT操作
 - 封装`SELECT`操作为`select()`函数执行，需要传入SQL语句及SQL参数：
 - SQL语句占位符是`？`，而MySQL占位符是`%s`,`select()`函数内部自动替换。*注意要始终坚持使用带参数的SQL，而不是自己拼接SQL字符串，这样可以防止SQL注入攻击。*
-- `cur.execute(&#39;select * from user where id = %s&#39;, (&#39;1&#39;,))`
+- `cur.execute('select * from user where id = %s', ('1',))`
 - 如果传入size参数，就通过`fetchmany`获得最多指定数量的记录，否则就通过`fetchall`获得所有记录。
 
 ### 封装INSERT,UPDATE,DELETE操作
@@ -393,3 +393,170 @@ def api_get_users():
     return dict(users=users)
 ```
 - 只要返回一个`dict` ，后续的`response`这个`middleware`就可以把结果序列化为JSON并返回。
+
+
+## Day-10 用户注册和登录
+> 用户管理是绝大部分Web网站都需要解决的问题，涉及用户注册和登录。
+
+- **用户注册**
+1. 用户注册功能通过API先实现用户注册功能：代码中部分为`@post('/api/users')`。
+*需要注意的是用户口令是客户端传递的经过`SHA1`计算后的40位Hash字符串，所以服务器端并不知道用户的原始口令。* 
+1. 接下来创建一个注册界面给用户填写注册表单，然后提交数据到注册用户的API。代码中部分为`templates/register.html`。
+> 这里的流程是首先浏览器输入http://localhost:9000/，进入主页面，点击右上角注册，__base.html中通过链接跳转到http://localhost:9000/register网页，触发handlers.py文件中的@get('/register')请求，加载register.html网页，填写好信息后，点击提交按钮，会触发register.html的block beforehead部分的JavaScript代码。JavaScript代码的主要几个步骤为：
+1：校验输入值是否正确。
+2：针对密码生成SHA1值。
+3：执行@get(’/api/users’)函数，在该部分提交信息，并向浏览器返回cookie。
+4：完成后返回主页。
+
+- **用户登录**
+1. 用户登录要比用户注册复杂。由于`HTTP协议`是一种无状态协议，而服务器要跟踪用户状态，就只能通过`cookie`实现。大多数Web框架提供了`Session`功能来封装保存用户状态的`cookie`。
+1. Session的优点是简单易用，可以直接从Session中取出用户登录信息。
+1. Session的缺点是服务器需要在内从中维护一个映射表来存储用户的登录信息，如果服务器是两台及以上，就需要对Session做集群，因此，使用Session的Web App很难扩展。
+1. 这里采用直接读取cookie的方式来验证用户登录，每次用户访问任意URL，都会对cookie进行验证，这种方式的好处就是保证服务器处理任意的URL都是无状态的，可以拓展到多台服务器。
+1. 由于登录成功后是由服务器生成一个cookie发送给浏览器，所以，要保证这个cookie不会被客户端伪造出来。实现防伪造的cookie的关键使用过一个单向算法（例如：SHA1），举例如下：
+> 当用户输入了正确的口令登录成功后，服务器可以从数据库取到用户的id，并按照如下的方式计算出一个字符串：
+`"用户id"+"过期时间"+SHA1("用户id"+"用户口令"+"过期时间"+"SecretKey")`
+当浏览器发送cookie到服务器端后，服务器可以拿到的信息包括：用户id、过期时间、SHA1值。如果未到过期时间，服务器就根据用户id查找用户口令，并计算：
+`SHA1("用户id"+"用户口令"+"过期时间"+"SecretKey")`，并与浏览器cookie中的哈希进行比较，如果相等，则说明用户已经登录，否则，cookie就是伪造的。
+这个算法的关键就是在于SHA1是一种单向算法，即是可以通过原始字符串可以计算出SHA1结果，但是无法通过SHA1结果反推出原始字符串。
+
+1. 登录的API实现在是代码中为`@post('/api/authenticate')`，以及计算加密cookie函数为`def user2cookie(user, max_age)`。
+1. 对于每个URL处理函数，都去解析cookie的代码，那会导致代码重复好多次。
+1. 如果利用middle在处理URL之前，把cookie解析出来，cookie解析协程函数为`async def cookie2user(cookie_str)`，并将登录用户绑定在request对象上，这样，后续的URL处理函数就可以直接拿到登录用户，对应程序中的协程函数为`async def auth_factory(app, handler)`。这样便完成了用户管理中的用户注册和登录功能。
+
+> 密码生成
+从上一节中，可以看出密码生成的步骤如下：
+1 ：在register.html文件中的JavaScript将passward进行第一次包装，生成A，传递到@get(’/api/users’)中。
+`CryptoJS.SHA1(email + ':' + this.password1).toString()`
+2：@post(’/api/users’)绑定函数接下来对A进行第二次包装，生成B。
+`sha1_passwd = '%s:%s' % (uid, passwd)`
+3：user2cookie函数对B进行第三次包装，生成C。
+```python
+#id-B-到期时间-秘钥
+expires = str(int(time.time() + max_age))
+s = '%s-%s-%s-%s' % (user.id, user.passwd, expires, _COOKIE_KEY)
+```
+4： 返回用户id-到期时间-C
+```python
+#用户id-到期时间-C
+L = [user.id, expires, hashlib.sha1(s.encode('utf-8')).hexdigest()]
+```
+
+>密码比较
+在用户cookie未到期时，对用户认证的时候，通过signin.html里的SHA1(email+password)值对password进行包装生成A。
+`passwd: this.passwd==='' ? '' : CryptoJS.SHA1(email + ':' + this.passwd).toString()`
+接下来运行handlers中@post('/api/authenticate')的绑定函数，对密码进行再次包装生成B。
+```python 
+#check passwd:
+sha1 = hashlib.sha1()
+sha1.update(user.id.encode('utf-8'))
+sha1.update(b':')
+sha1.update(passwd.encode('utf-8'))
+```
+然后对比两个密码，判断是否登陆。
+`if user.passwd != sha1.hexdigest()`
+如果认证通过，更新cookie。最后通过signin.html中的location.assign('/');来跳转到主页面，并传递用户信息到blogs.html中。完成右上角的信息请求。
+---
+[原文链接](https://blog.csdn.net/suyiwei5993/article/details/83627395)
+
+
+## Day-11 编写日志创建页
+- 在编写完ORM框架，web开发框架之后，后端代码写起来就相对的比较轻松了，现在编写一个REST API ,用来创建blog：`@post('/api/blogs')`。
+
+- Web开发真正困难的地方就是编写前端页面。前端页面需要混合HTML、CSS和JavaScript，如果对这三者没有深入地掌握，编写的前端页面将很快难以维护。
+- 更大的问题在于前端页面通常是动态页面，也就是说，前端页面往往是由后端代码生成的。ASP、JSP、PHP等都是用以下这种模板方式生成前端页面。
+
+- 如果在页面上要使用大量的javaScript，这样的模板会导致JavaScript代码与后端代码绑得非常紧密，以至于难以维护。**根本原因还是：负责显示的DOM模型(Document Object Model)与负责数据和交互的JavaScript代码没有分割清楚。**
+
+- 所以新的MVVM：Model View ViewModel模式应运而生。个人认为这个MVVM就是基于前端页面的MVC。
+
+- 在前端页面中，用纯JavaScript对象表示Model，而View则是纯HTML。
+- Model表示数据，View负责显示，两者做到了最大限度的分离。
+- ViewModel作用是把Model和View关联起来的。ViewModel负责把Model的数据同步到View显示出来，还负责把View的修改同步回Model。
+
+- ViewModel如何编写？需要用JavaScript编写一个通用的ViewModel，这样，就可以复用整个MVVM模型了。
+
+- 已经有很多成熟的MVVM框架可以使用，如AngularJS，KnockoutJS等，我们这里选择[Vue](https://vuejs.org/ "Vue")这个简单易用的MVVM框架来实现创建Blog的页面`templates/manage_blog_edit.html`。
+
+-  初始化Vue时，我们指定3个参数：
+1. el:根据选择器查找绑定的View，这里是#VM，就是id为VM的DOM，对应的是一个<div>标签；
+1. data：JavaScript对象表示的Model，我们初始化为`{name: '', summary: '', content: ''}`；
+1. Models：View可以触发的JavaScript函数，submit就是提交表单时创建的函数。
+-  接下来，我们在`<Form>`标签中，用几个简单的`v-model`,就可以让Vue把Model和View关联起来。
+- Form表单通过`<form v-on="submit: submit">`把提交表单的事件关联到`submit`方法。
+
+- 需要特别注意的是，在MVVM中，Model和View是双向绑定的。如果我们在Form中修改了文本框中的值，可以在Model中立刻拿到新的值。
+- 双向绑定是MVVM框架最大的作用。借助MVVM，我们把最复杂的显示逻辑交给框架完成。由于后端编写了独立的REST API，所以，前端用AJAX提交表单非常容易，前后端分离得非常彻底。
+
+## Day-12 编写日志列表页
+
+- `MVVM`模式不但可用于Form表单，在复杂的管理页面中也能大显身手。例如，分页显示Blog的功能，我们先把后端代码写出来： 在`apis.py`中定义一个Page类用于存储分页信息：`class Page(object)`。
+- 在`handlers.py`中编写API实现接口用于数据库返回日志。`@get('/api/blogs')`。
+- 编写管理页面 REST API：`@get('/manage/blogs')`。
+- 模板页面首先通过API：`GET /api/blogs?page=?`拿到Model：
+```python
+{
+    "page": {
+        "has_next": true,
+        "page_index": 1,
+        "page_count": 2,
+        "has_previous": false,
+        "item_count": 12
+    },
+    "blogs": [...]
+}
+```
+- 然后，通过Vue初始化MVVM:`templates/manage_blogs.html`。View的容器是`#vm`，包含一个`table`，我们用`v-repeat`可以把`Model`的数组`blogs`直接变成多行的`<tr>`;可以把`v-repeat=”blog: blogs”`看成循环代码，所以，可以在一个内部引用循环变量blog。`v-text`和`v-attr`指令分别用于生成文本和DOM节点属性。
+
+## Day-13 提升开发效率
+
+- 每次修改代码，都必须在命令行先`Ctrl-C`停止服务器，再重启，改动才能生效。
+- 有没有办法让服务器检测到代码修改后自动重新加载呢？思路是检测www目录下的代码改动，一旦有改动，就自动重启服务器。
+- 按照思路，我们可以编写一个辅助程序`pymonitor.py`，让它启动`app.py`，并时刻监控www目录下的代码改动，有改动时，先把当前`app.py`进程杀掉，再重启，就完成了服务器进程的自动重启。
+- 这里使用得是Python第三方库`watchdog`：`pip install watchdog`
+- 利用`watchdog`接收文件变化的通知，如果是`.py`文件，就自动重启`app.py`进程。
+- 利用`Python`自带的`subprocess`实现进程的启动和停止，并把输入输出重定向到当前进程的输入和输出。
+
+- 启动服务器：
+1. `$ python3 pymonitor.py app.py`;
+1. ```bash
+chomd u+x pymonitor.py
+$ pymonitor.py app.py
+```
+
+## Day-14 完成WebApp
+
+- 在`WebApp`框架和基本流程跑通后，剩下的工作全部是体力活了：在`Debug`开发模式下完成后端所有API、前端所有页面。我们需要做的事情包括：
+
+- 把当前用户绑定到`request`上，并对`URL/manage/`进行拦截，检查当前用户是否是管理员身份，功能实现为工厂函数：`async def data_factory(app, handler)`。
+- 用户注册时，`users`表中`admin`字段置为**0**的，管理员用户需要将其修改为**1**.
+
+- **后端API包括：**
+```Markdown
+[x] •获取日志：GET /api/blogs
+[x] •创建日志：POST /api/blogs
+[x] •修改日志：POST /api/blogs/:blog_id
+[x] •删除日志：POST /api/blogs/:blog_id/delete
+[x] •获取评论：GET /api/comments
+[x] •创建评论：POST /api/blogs/:blog_id/comments
+[x] •删除评论：POST /api/comments/:comment_id/delete
+[x] •创建新用户：POST /api/users
+[x] •获取用户：GET /api/users
+```
+- **管理页面包括：**
+```Markdown
+[x] •评论列表页：GET /manage/comments
+[x] •日志列表页：GET /manage/blogs
+[x] •创建日志页：GET /manage/blogs/create
+[x] •修改日志页：GET /manage/blogs/edit
+[x] •用户列表页：GET /manage/users
+```
+- **用户浏览页面包括：**
+```Markdown
+[x] •注册页：GET /register
+[x] •登录页：GET /signin
+[x] •注销页：GET /signout
+[x] •首页：GET /
+[x] •日志详情页：GET /blog/:blog_id
+```
+把所有的功能实现，我们第一个Web App就宣告完成！

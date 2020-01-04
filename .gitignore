@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 
 /awesome-python3-webapp-dev
+
+# idea
+/.idea/
