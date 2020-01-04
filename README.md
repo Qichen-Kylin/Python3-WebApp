@@ -527,7 +527,7 @@ $ pymonitor.py app.py
 
 ## Day-14 完成WebApp
 
-- 在`WebApp`框架和基本流程跑通后，剩下的工作全部是体力活了：在`Debug`开发模式下完成后端所有API、前端所有页面。我们需要做的事情包括：
+-在`WebApp`框架和基本流程跑通后，剩下的工作全部是体力活了：在`Debug`开发模式下完成后端所有API、前端所有页面。我们需要做的事情包括：
 
 - 把当前用户绑定到`request`上，并对`URL/manage/`进行拦截，检查当前用户是否是管理员身份，功能实现为工厂函数：`async def data_factory(app, handler)`。
 - 用户注册时，`users`表中`admin`字段置为**0**的，管理员用户需要将其修改为**1**.
