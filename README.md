@@ -520,9 +520,9 @@ sha1.update(passwd.encode('utf-8'))
 
 - 启动服务器：
 1. `$ python3 pymonitor.py app.py`;
-1. ```bash
-chomd u+x pymonitor.py
-$ pymonitor.py app.py
+1. ```Markdown
+    chomd u+x pymonitor.py
+    $ pymonitor.py app.py
 ```
 
 ## Day-14 完成WebApp
