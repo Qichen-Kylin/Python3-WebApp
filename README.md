@@ -582,7 +582,7 @@ root     15801 15391  0 09:52 pts/0    00:00:00 grep ssh
 
 ### 部署方式
 - 利用`Python`自带的`asynico`,以及完成了一个异步高性能服务器。但是还需要一个高性能的`Web`服务器，这里选择`Nginx`，它可以处理静态资源，同时作为反向代理把动态请求交给Python代码处理。Nginx负责分发请求模型如下：
-![Nginx负责分发请求模型]()。
+![Nginx负责分发请求模型](https://github.com/Qichen-Kylin/Python3-WebApp/blob/master/www/app/static/img/Nginx%E8%B4%9F%E8%B4%A3%E5%88%86%E5%8F%91%E8%AF%B7%E6%B1%82%E6%A8%A1%E5%9E%8B.jpg)。
 
 - 在服务器端，我们需要定义好部署的目录结构：
 ```markdown
