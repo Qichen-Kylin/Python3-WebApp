@@ -560,3 +560,145 @@ sha1.update(passwd.encode('utf-8'))
 - [x] •日志详情页：GET /blog/:blog_id
 
 把所有的功能实现，我们第一个Web App就宣告完成！
+
+
+## Day-15 部署WebApp
+- Linux系统安装准备完毕后，保证ssh服务正在运行：
+```Bash
+--Linux,Unbuntu有些许差异
+[root@bdpadmin ~]# service sshd status
+openssh-daemon (pid  4348) is running...
+[root@bdpadmin ~]# ps -ef | grep ssh
+root      4348     1  0  2018 ?        00:00:19 /usr/sbin/sshd
+root     15386  4348  0 09:49 ?        00:00:00 sshd: root@pts/0 
+root     15801 15391  0 09:52 pts/0    00:00:00 grep ssh
+```
+否则(安装)启动：
+```Bash
+[root@bdpadmin ~]# sudo apt-get install openssh-server
+[root@bdpadmin ~]# service sshd start
+```
+有了ssh服务，就可以从本地连接到服务器上。建议把公钥复制到服务器端用户的`.ssh/authorized_keys`中实现无密码认证链接。
+
+### 部署方式
+- 利用`Python`自带的`asynico`,以及完成了一个异步高性能服务器。但是还需要一个高性能的`Web`服务器，这里选择`Nginx`，它可以处理静态资源，同时作为反向代理把动态请求交给Python代码处理。Nginx负责分发请求模型如下：
+![Nginx负责分发请求模型]()。
+
+- 在服务器端，我们需要定义好部署的目录结构：
+```markdown
+/
++- srv/
+    +- awesome/ <-- Web App根目录
+        +- www/app/ <-- 存放Python源码
+            | +- static/ <--存放静态资源文件
+        +- log/ <-- 存放服务log
+```
+在服务器上部署，要考虑到新版本如果运行不正常，需要回退到旧版本时怎么办。每次用新的文件覆盖旧的文件是不行的，需要一个类似版本控制的机制。由于`Linux`系统提供了软链接功能，所以，把`www`目录作为一个软链接，它指向哪个版本目录，哪个就是当前运行的版本。而`Nginx`和`Python`代码的配置文件只需要指向`www`目录即可。
+> 软链接相关参照：(软链接类似Windows下快捷方式)
+1、软链接建立： `ln -s   /原路径1  /软链接路径`
+2、软链接修改： `ln -snf /原路径2  /软链接路径`
+3、软链接删除： `rm [-rf] /软链接路径`
+
+- Nginx可以作为服务进程直接启动，但是app.py还不行，所以，[Supervisor](http://supervisord.org/)登场。`Supervisor`是一个管理进程的工具，可以随系统的启动而启动服务，它还时刻监控服务进程，如果服务进程意外退出，`Supervisor`可以自动重启服务。
+
+- 需要用到的服务有：
+1. Nginx ： 高性能Web服务器+负责反向代理；
+1. Supervisor ： 监控服务进程的工具；
+1. MySQL ： 数据库服务；
+1. Python ：基本运行环境。
+在Linux服务器上用apt直接安装上述服务：
+`$ sudo apt-get install nginx supervisor python3 mysql-server`。
+
+- 有了Python基础环境，然后将WebApp所用到的的Python库安装了：
+`$ sudo pip3 install jinja2 aiomysql aiohttp`。
+
+- 在服务器上初始化和配置好MySQL数据库后，执行数据库初始化脚本：
+`$ mysql -u root -p < schema.sql`。
+
+- ...... 服务器准备就绪。
+
+### 部署 
+- 用FTP还是SCP还是rsync复制文件。（手动复制部署）
+
+- 一般正确的部署方式是使用工具配合脚本完成自动化部署。[Fabric](http://www.fabfile.org/)是一个自动化部署工具。开发本地安装`Fabric`后，编写部署脚本`fabfile.py`，文件与www目录平级。
+> Fabric is a high level Python (2.7, 3.4+) library designed to execute shell commands remotely over SSH, yielding useful Python objects in return。
+
+- Fabric脚本编写：
+    1. 首先导入Fabric的API，设置部署时的变量；
+
+    1. 每个Python函数都是一个任务，先写一个打包的任务：`def build()`；
+        - Fabric提供`local('...')`来运行本地命令，with lcd(path)可以把当前命令的目录设定为`lcd()`指定的目录，注意Fabric只能运行命令行命令，Windows下可能需要[Cgywin](http://cygwin.com/)环境。
+   
+    1.  在`Python3-WebApp`目录下运行： `$ fab build`。顺利的话会在dist目录下创建`dist-awesome.tar.gz`的文件；
+
+    1.  打包后，就可以继续编写`deploy`任务，把打包文件上传至服务器，解压、重置www软链接、重启相关服务；
+        - Fabric提供`run()`函数执行的命令是在服务器上运行，`with cd(path)`和`with lcd(path)`类似，把当前目录在服务器端设置为`cd()`指定的目录。如果一个命令需要sudo权限，就不能用`run()`,而是用`sudo()`来执行。
+   
+### 配置Supervisor
+- 编写一个Supervisor的配置文件`awesome.conf`,存放到`/etc/supervisor/conf.d/`目录下：
+```markdown
+[program:awesome]
+command = /srv/awesome/www/app/app.py
+directory = /srv/awesome/www/app
+user = webapp
+startsecs = 3
+redirect_stderr = true
+stdout_logfile_maxbytes = 50MB
+stdout_logfile_backups = 10
+stdout_logfile = /srv/awesome/log/app.log
+```
+- 配置文件通过`[program:awesome]`指定服务名为`awesome`，`command`指定启动`app.py`。
+- 然后重启Supervisor后，就可以随时启动和停止Supervisor管理的服务了。
+```Markdown
+$ sudo supervisorctl reload
+$ sudo supervisorctl start awesome
+$ sudo supervisorctl status
+```
+
+### 配置Nginx
+- Supervisor只负责运行`app.py`,所以还需要配置Nginx，把配置文件`awesome`放到`/etc/nginx/sites-available/`目录下：
+```markdown
+server {
+        listen 80; # 监听80端口
+        root /srv/awesome/www/app;
+        access_log /srv/awesome/log/access_log;
+        error_log /srv/awesome/log/error_log;
+        #server_name awesome.kylin.com; # 配置域名
+        #处理静态文件/favicon.ico:
+        location /favicon.ico {
+            root /srv/awesome/www/app;
+        }
+        #处理静态资源:
+        location ~ ^\/static\/.*$ {
+            root /srv/awesome/www/app;
+        }
+        # 动态请求转发到9000端口:
+            location / {
+            proxy_pass http://127.0.0.1:9000;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+```
+
+- 然后在`etc/nginx/sites-available/`该目录下创建软链接：
+```Markdown
+$ pwd
+/etc/nginx/sites-enabled
+$ sudo ln -s /etc/nginx/sites-available/awesome .
+```
+
+- 让Nginx重新加载配置文件：
+`$ sudo /etc/init.d/nginx reload`
+
+- 如果有任何错误，都可以在`/srv/awesome/log`下查找Nginx和App本身的log。如果Supervisor启动时报错，可以在`/var/log/supervisor`下查看Supervisor的log。
+
+如果一切顺利，就可以在浏览器中访问WebApp了！
+
+---
+- 如果开发环境更新了代码，只要在命令行执行如下两条指令，就完成自动部署服务：
+```bash
+$ fab build
+$ fab deploy
+```
